@@ -1,16 +1,16 @@
-from tokenize import blank_re
-from unicodedata import category
 from django.db import models
 from django.forms import SlugField
 from django.core.files import File
 from PIL import Image
 from io import BytesIO
+from django.contrib.auth.models import User
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField()
 
     class Meta:
+        verbose_name_plural = 'Categories'
         ordering = ('name',)
 
     def __str__(self):
@@ -33,7 +33,7 @@ class Product(models.Model):
         return self.name
 
     def get_display_price(self):
-        return self.price
+        return self.price / 100
 
     def get_thumbnail(self):
         if self.thumbnail:
@@ -60,3 +60,21 @@ class Product(models.Model):
 
         return thumbnail
 
+    def get_rating(self):
+        reviews_total = 0
+
+        for review in self.reviews.all():
+            reviews_total += review.rating
+
+        if reviews_total > 0:
+            return reviews_total / self.reviews.count()
+
+        return 0
+
+
+class Review(models.Model):
+    product = models.ForeignKey(Product, related_name='reviews', on_delete=models.CASCADE)
+    rating = models.IntegerField(default=3)
+    content = models.TextField()
+    created_by = models.ForeignKey(User, related_name='reviews', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)

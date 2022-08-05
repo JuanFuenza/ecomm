@@ -1,8 +1,30 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 
-from product.models import Product
+from product.models import Product, Review
 
 def product(request, slug):
     product = get_object_or_404(Product, slug=slug)
+
+    if request.method == 'POST':
+        rating = request.POST.get('rating', 3)
+        content = request.POST.get('content', '')
+
+        if content:
+            review = Review.objects.filter(created_by=request.user, product=product)
+
+            if review.count() > 0:
+                review = review.first()
+                review.rating = rating
+                review.content = content
+                review.save()
+            else:
+                review = Review.objects.create(
+                    product=product,
+                    rating=rating,
+                    content=content,
+                    created_by=request.user
+                )
+
+            return redirect('product', slug=slug)
 
     return render(request, 'product/product.html', {'product': product})
